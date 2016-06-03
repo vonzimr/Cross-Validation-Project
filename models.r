@@ -17,7 +17,11 @@ quadModel <- function(x, y){
   model <- lm(y~x + I(x^2), df)
   return(function(x){as.numeric(model$coeff[1] + model$coeff[2]*x + model$coeff[3]*x^2)})
 }
-
+polyModel <- function(x, y){
+  df <- data.frame(x, y)
+  model <- lm(y~x+I(x^2)+I(x^3)+I(x^4)+I(x^5)+I(x^6)+I(x^7), df)
+  return(function(x){as.numeric(model$coeff[1] + model$coeff[2]*x + model$coeff[3]*x^2+ model$coeff[4]*x^3 + model$coeff[5]*x^4 + model$coeff[6]*x^5+ model$coeff[7]*x^6+ model$coeff[8]*x^7)})
+}
 linterpModel <- function(x, y){
 model <- approxfun(x, y)
 f <- function(x){
