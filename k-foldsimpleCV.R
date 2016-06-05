@@ -72,14 +72,21 @@ simpleCV <- function(x, y, k, createModelFunction, plots=TRUE){
   return(data.frame(mean(error), var(error)))
 }
 
-
-
+residualSelection <- function(x, y){
+  models <- c(expModel, linModel, quadModel, polyModel, linterpModel)
+  modelSelection <- c("Exponential", "Linear", "Quadratic", "Poly-7", "Interpolation")
+  modelFits <- lapply(models, FUN=function(m){return(m(x, y))})
+  approx <- lapply(modelFits, function(m){m(x)})
+  errors <- sapply(approx, function(a){mse(as.numeric(a), y)})
+  return(data.frame(modelSelection, errors))
+}
 
 simpleModelSelection <- function(x, y, k, plots=FALSE){
   models <- c(expModel, linModel, quadModel, polyModel, linterpModel)
   modelSelection <- c("Exponential", "Linear", "Quadratic", "Poly-7", "Interpolation")
   modelFits <- sapply(models, FUN=function(model){simpleCV(x, y, k, model, plots)})
-  return(data.frame(modelSelection, t(modelFits)))
+  return(t(modelFits))
+#  return(data.frame(modelSelection, t(modelFits)))
 }
 
 
@@ -126,20 +133,38 @@ simpleCV(x, errors, 10, linModel)
 ####################################
 
 #Checking error of classication of same model
-l <- 20
-B <- 1000
-x <- seq(0, 5, (5)/l)
-y <- as.numeric(lapply(x, FUN=function(xi){return(xi + (runif(1, 0, 4)))}))
-#We are aware that this should be classified as a linear model
-accuracyEstimate <- function(k){
+l <- 5 
+B <- 500
+#Start with a simple set of linear data 
+x <- seq(0, 5, 1/l)
+y <- x + 1
+accuracyEstimate <- function(x, y, k, trueModel){
     select <- simpleModelSelection(x, y, k)
     classification <- select[select$mean.error == min(as.numeric(select$mean.error),na.rm=TRUE),]$modelSelection
-    return(as.numeric(classification == "Linear")[1])
+    return(as.numeric(classification == trueModel)[1])
 }
 errorK <- double(l-2)
 for(i in 2:(l-1)){
-    errorK[i-1] <- mean(replicate(B, accuracyEstimate(i)))
+    errorK[i-1] <- mean(replicate(B, accuracyEstimate(x, y,i)))
 }                                                            
+
+
+#Exponential Model (This is never going to be not super good)
+x <- seq(0, 5, 1/l)
+y <- exp(.2*x) 
+
+errorExp <- double(l-2)
+for(i in 2:(l-1)){
+    errorExp[i-1] <- mean(replicate(B, accuracyEstimate(x, y,i, "Exponential")))
+}                                                            
+
+#Simply checking the residuals
+residualSelection(x, y)
+
+#Make some noise
+#Exponential Model (This is never going to be not super good)
+x <- seq(0, 5, 1/l)
+y <- sapply(exp(.2*x), function(x){x + rnorm(1, 0, .25)})
 #Error rate for classication of models with varying sample sizes
 
 ###################################
