@@ -76,8 +76,8 @@ simpleCV2 <- function(x, y, k, createModelFunction, plots=TRUE){
 
 
 simpleModelSelection <- function(x, y, k, plots=FALSE){
-  models <- c(expModel, linModel, quadModel, linterpModel)
-  modelSelection <- c("Exponential", "Linear", "Quadratic", "Interpolation")
+  models <- c(expModel, linModel, quadModel, polyModel, linterpModel)
+  modelSelection <- c("Exponential", "Linear", "Quadratic", "Poly-7", "Interpolation")
   modelFits <- sapply(models, FUN=function(model){simpleCV(x, y, k, model, plots)})
   return(data.frame(modelSelection, t(modelFits)))
 }
@@ -89,6 +89,10 @@ simpleModelSelection <- function(x, y, k, plots=FALSE){
 ######################################
 plot.new()
 par(mfrow=c(1,1))
+#How many times should CV be repeated
+B <- 10
+#Size of dataframe
+l <- 100
 #Create a simple slightly random linear set of points
 l <- 10
 B <- 10
@@ -106,10 +110,11 @@ for(k in 2:(l-1)){
   y <- as.numeric(lapply(x, FUN=function(xi){return(xi + (runif(1, 0, .1)))}))
   for(i in 1:B){
     error[i] <- as.numeric(simpleCV(x, y, k, linModel,  plots=FALSE)$mean.error)
+    error[i] <- as.numeric(simpleCV(x, y, k, linModel,  plots=FALSE)$var.error)
   }
   errors[k-1] <- mean(error)
 }
-plot(errors, ylab ="Variance of Fold", xlab="Fold", main="Errors for each fold in Cross Validation of Linear Model")
+plot(errors, ylab ="Variance", xlab="Fold", main="Errors for each fold in Cross Validation of Linear Model")
 
 #Running Cross Validation on Errors
 x <- 1:length(errors)
