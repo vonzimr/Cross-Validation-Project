@@ -1,5 +1,6 @@
 
 library(Metrics)
+library(matrixStats)
 source("models.r")
 
 #Note that I'm assuming the columns of the dataframe are labeled 'x' and 'y',
@@ -11,7 +12,7 @@ trSet <- function(df, te){
     unorderedTrain <- df[!(df$x %in% te$x), ]
     return(unorderedTrain[order(unorderedTrain$x, decreasing=FALSE),])
 }
-simpleCV <- function(x, y, k, modelF, plots=FALSE){
+kFoldPert <- function(x, y, k, modelF, plots=FALSE){
   df <- data.frame(x, y)
   shuffledDF <- vector(length=k)
   testSets  <- vector(length=k)
@@ -22,12 +23,11 @@ simpleCV <- function(x, y, k, modelF, plots=FALSE){
   shuffledDF <- df[sample(nrow(df)),]
   testSets <- split(shuffledDF,1:k)
   trainSets <- lapply(testSets, function(x){return(trSet(df, x))})
-  models <- lapply(trainSets ,function(df){modelF(df$x, df$y)})
-  errors <- sapply(1:k, function(i){mse(models[[i]](testSets[[i]]$x), testSets[[i]]$y)}) 
-  return(data.frame(mean(errors), var(errors)))
+  modelCoeffs <- sapply(trainSets ,function(df){modelF(df$x, df$y)})
+  return(data.frame(rowMeans(modelCoeffs), rowVars(modelCoeffs)))
 
 }
-simpleCV2 <- function(x, y, k, createModelFunction, plots=TRUE){
+simpleCV <- function(x, y, k, createModelFunction, plots=TRUE){
   df <- data.frame(x, y)
   #Set up the Plot Layout
   if(plots){
@@ -94,8 +94,6 @@ B <- 10
 #Size of dataframe
 l <- 100
 #Create a simple slightly random linear set of points
-l <- 10
-B <- 10
 x <- seq(0, 5, (5)/l)
 y <- as.numeric(lapply(x, FUN=function(xi){return(xi + (runif(1, 0, 1)))}))
 plot(x,y)
@@ -126,21 +124,32 @@ simpleCV(x, errors, 10, linModel)
 ####################################
 #Accuracy of Classication of Model #
 ####################################
-l <- 100
-B <- 100
+
+#Checking error of classication of same model
+l <- 20
+B <- 1000
 x <- seq(0, 5, (5)/l)
-y <- as.numeric(lapply(x, FUN=function(xi){return(xi + (runif(1, 0, 1)))}))
+y <- as.numeric(lapply(x, FUN=function(xi){return(xi + (runif(1, 0, 4)))}))
 #We are aware that this should be classified as a linear model
 accuracyEstimate <- function(k){
     select <- simpleModelSelection(x, y, k)
-    classification <- select[select$mean.error == min(as.numeric(select$mean.error)),]$modelSelection
-    return(as.numeric(classification == "Linear"))
+    classification <- select[select$mean.error == min(as.numeric(select$mean.error),na.rm=TRUE),]$modelSelection
+    return(as.numeric(classification == "Linear")[1])
 }
 errorK <- double(l-2)
 for(i in 2:(l-1)){
-    errorK[i-1] <- mean(replicate(100, accuracyEstimate(i)))
+    errorK[i-1] <- mean(replicate(B, accuracyEstimate(i)))
 }                                                            
+#Error rate for classication of models with varying sample sizes
 
+###################################
+#Perturbations of coefficients    #
+#in Regression Models             #
+###################################
+cModels <- c(linModelc, quadModelc, cubicModelc,
+             quartModelc, quintModelc, sextModelc,
+             septModelc)
+lapply(cModels, FUN=function(m){kFoldPert(x,y, 10, m)})
 
 ######################################
 #Example Output and Demonstration of #
